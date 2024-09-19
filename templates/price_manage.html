@@ -1,0 +1,342 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>票价管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/price_manage_styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>导航栏</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('home') }}" class="{{ 'active' if active_link == 'home' else '' }}"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="{{ url_for('station_manage') }}" class="{{ 'active' if active_link == 'station_manage' else '' }}"><i class="fas fa-train"></i> 站点管理</a></li>
+                <li><a href="{{ url_for('train_manage') }}" class="{{ 'active' if active_link == 'train_manage' else '' }}"><i class="fas fa-train"></i> 车次管理</a></li>
+                <li><a href="{{ url_for('price_manage') }}" class="{{ 'active' if active_link == 'price_manage' else '' }}"><i class="fas fa-money-bill-alt"></i> 票价管理</a></li>
+                <li><a href="{{ url_for('sale_manage') }}" class="{{ 'active' if active_link == 'sale_manage' else '' }}"><i class="fas fa-shopping-cart"></i> 购票</a></li>
+                <li><a href="{{ url_for('refund_manage') }}" class="{{ 'active' if active_link == 'refund_manage' else '' }}"><i class="fas fa-undo"></i> 退票</a></li>
+                <li><a href="{{ url_for('statistics_train') }}" class="{{ 'active' if active_link == 'statistics_train' else '' }}"><i class="fas fa-chart-bar"></i> 车次销售统计</a></li>
+                <li><a href="{{ url_for('statistics_staff') }}" class="{{ 'active' if active_link == 'statistics_staff' else '' }}"><i class="fas fa-chart-bar"></i> 业务员销售统计</a></li>
+                <li><a href="{{ url_for('user_manage') }}" class="{{ 'active' if active_link == 'user_manage' else '' }}"><i class="fas fa-user"></i> 业务员管理</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+        <div class="main_content">
+            <div class="header">票价管理</div>
+            <div class="content-wrapper">
+                <div class="form-container">
+                    <div class="price_search">
+                        <h2>搜索票价</h2>
+                        <form id="price_search_form">
+                            <input type="text" name="train_id" placeholder="车次号">
+                            <input type="text" name="start_station" placeholder="站点一">
+                            <input type="text" name="end_station" placeholder="站点二">
+                            <button type="submit" class="btn">搜索</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="user-list-wrapper">
+                    <div class="user-list-title">票价列表</div>
+                    <table id="price_table">
+                        <thead>
+                            <tr>
+                                <th>车次号</th>
+                                <th>始发站</th>
+                                <th>终点站</th>
+                                <th>商务座</th>
+                                <th>一等座</th>
+                                <th>二等座</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 票价数据将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改票价弹窗 -->
+    <div id="edit-price-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>修改票价</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="edit-price-form">
+                    <input type="hidden" name="train_id" id="edit-train-id">
+                    <input type="hidden" name="start_station" id="edit-start-station">
+                    <input type="hidden" name="end_station" id="edit-end-station">
+                    <div class="form-group">
+                        <label for="edit-business-seat-price">商务座价格</label>
+                        <input type="number" id="edit-business-seat-price" name="business_seat_price" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-first-class-seat-price">一等座价格</label>
+                        <input type="number" id="edit-first-class-seat-price" name="first_class_seat_price" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-second-class-seat-price">二等座价格</label>
+                        <input type="number" id="edit-second-class-seat-price" name="second_class_seat_price" required>
+                    </div>
+                    <div class="form-group form-group-btn">
+                        <button type="submit" class="btn">修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            function showAlert(message) {
+                const alertModal = $('<div class="modal"><div class="modal-content"><div class="modal-header"><h2>提示</h2><span class="close">&times;</span></div><div class="modal-body"><p>' + message + '</p></div></div></div>');
+                $('body').append(alertModal);
+                alertModal.show();
+
+                // 关闭模态框
+                alertModal.find('.close').on('click', function() {
+                    alertModal.remove();
+                });
+
+                // 点击模态框外部区域关闭
+                $(window).on('click', function(event) {
+                    if (event.target === alertModal[0]) {
+                        alertModal.remove();
+                    }
+                });
+            }
+
+            // 加载票价列表
+            function loadPrices() {
+                $.ajax({
+                    url: "{{ url_for('get_all_price') }}",
+                    method: "POST",
+                    data: {train_id: document.getElementById('price_search_form').querySelector('input[name="train_id"]').value},
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            let prices = response.data;
+                            let table_body = '';
+                            prices.forEach(function(price) {
+                                table_body += '<tr>';
+                                table_body += '<td>' + price.train_id + '</td>';
+                                table_body += '<td>' + price.start_station + '</td>';
+                                table_body += '<td>' + price.end_station + '</td>';
+                                table_body += '<td>' + price.business_seat_price + '</td>';
+                                table_body += '<td>' + price.first_class_seat_price + '</td>';
+                                table_body += '<td>' + price.sceond_class_seat_price + '</td>';
+                                table_body += '<td><button class="edit-train-btn" data-train-id="' + price.train_id + '" data-start-station="' + price.start_station + '" data-end-station="' + price.end_station + '">修改</button></td>';
+                                table_body += '</tr>';
+                            });
+                            $('#price_table tbody').html(table_body);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            }
+
+            // 搜索票价
+            $('#price_search_form').on('submit', function(event) {
+                event.preventDefault();
+                var train_id = $(this).find('input[name="train_id"]').val();
+                var start_station = $(this).find('input[name="start_station"]').val();
+                var end_station = $(this).find('input[name="end_station"]').val();
+                // 根据不同的搜索条件调用不同的接口
+                if (train_id && start_station && end_station) {
+                    $.ajax({
+                        url: "{{ url_for('get_price_by_train_id_and_station') }}",
+                        method: "POST",
+                        data: { train_id: train_id, start_station: start_station, end_station: end_station },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                let prices = response.data;
+                                let table_body = '';
+                                prices.forEach(function(price) {
+                                    table_body += '<tr>';
+                                    table_body += '<td>' + price.train_id + '</td>';
+                                    table_body += '<td>' + price.start_station + '</td>';
+                                    table_body += '<td>' + price.end_station + '</td>';
+                                    table_body += '<td>' + price.business_seat_price + '</td>';
+                                    table_body += '<td>' + price.first_class_seat_price + '</td>';
+                                    table_body += '<td>' + price.sceond_class_seat_price + '</td>';
+                                    table_body += '<td><button class="edit-train-btn" data-train-id="' + price.train_id + '" data-start-station="' + price.start_station + '" data-end-station="' + price.end_station + '">修改</button></td>';
+                                    table_body += '</tr>';
+                                });
+                                $('#price_table tbody').html(table_body);
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                } else if (train_id && start_station) {
+                    $.ajax({
+                        url: "{{ url_for('get_price_by_train_id_and_station') }}",
+                        method: "POST",
+                        data: { train_id: train_id, start_station: start_station },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                let prices = response.data;
+                                let table_body = '';
+                                prices.forEach(function(price) {
+                                    table_body += '<tr>';
+                                    table_body += '<td>' + price.train_id + '</td>';
+                                    table_body += '<td>' + price.start_station + '</td>';
+                                    table_body += '<td>' + price.end_station + '</td>';
+                                    table_body += '<td>' + price.business_seat_price + '</td>';
+                                    table_body += '<td>' + price.first_class_seat_price + '</td>';
+                                    table_body += '<td>' + price.sceond_class_seat_price + '</td>';
+                                    table_body += '<td><button class="edit-train-btn" data-train-id="' + price.train_id + '" data-start-station="' + price.start_station + '" data-end-station="' + price.end_station + '">修改</button></td>';
+                                    table_body += '</tr>';
+                                });
+                                $('#price_table tbody').html(table_body);
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                } else if (start_station && end_station) {
+                    $.ajax({
+                        url: "{{ url_for('get_price_by_station') }}",
+                        method: "POST",
+                        data: { station1: start_station, station2: end_station },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                let prices = response.data;
+                                let table_body = '';
+                                prices.forEach(function(price) {
+                                    table_body += '<tr>';
+                                    table_body += '<td>' + price.train_id + '</td>';
+                                    table_body += '<td>' + price.start_station + '</td>';
+                                    table_body += '<td>' + price.end_station + '</td>';
+                                    table_body += '<td>' + price.business_seat_price + '</td>';
+                                    table_body += '<td>' + price.first_class_seat_price + '</td>';
+                                    table_body += '<td>' + price.sceond_class_seat_price + '</td>';
+                                    table_body += '<td><button class="edit-train-btn" data-train-id="' + price.train_id + '" data-start-station="' + price.start_station + '" data-end-station="' + price.end_station + '">修改</button></td>';
+                                    table_body += '</tr>';
+                                });
+                                $('#price_table tbody').html(table_body);
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                } else if (start_station) {
+                    $.ajax({
+                        url: "{{ url_for('get_price_by_station') }}",
+                        method: "POST",
+                        data: { station1: start_station },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                let prices = response.data;
+                                let table_body = '';
+                                prices.forEach(function(price) {
+                                    table_body += '<tr>';
+                                    table_body += '<td>' + price.train_id + '</td>';
+                                    table_body += '<td>' + price.start_station + '</td>';
+                                    table_body += '<td>' + price.end_station + '</td>';
+                                    table_body += '<td>' + price.business_seat_price + '</td>';
+                                    table_body += '<td>' + price.first_class_seat_price + '</td>';
+                                    table_body += '<td>' + price.sceond_class_seat_price + '</td>';
+                                    table_body += '<td><button class="edit-train-btn" data-train-id="' + price.train_id + '" data-start-station="' + price.start_station + '" data-end-station="' + price.end_station + '">修改</button></td>';
+                                    table_body += '</tr>';
+                                });
+                                $('#price_table tbody').html(table_body);
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                } else if (train_id) {
+                    $.ajax({
+                        url: "{{ url_for('get_price_by_train_id') }}",
+                        method: "POST",
+                        data: { train_id: train_id },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                let prices = response.data;
+                                let table_body = '';
+                                prices.forEach(function(price) {
+                                    table_body += '<tr>';
+                                    table_body += '<td>' + price.train_id + '</td>';
+                                    table_body += '<td>' + price.start_station + '</td>';
+                                    table_body += '<td>' + price.end_station + '</td>';
+                                    table_body += '<td>' + price.business_seat_price + '</td>';
+                                    table_body += '<td>' + price.first_class_seat_price + '</td>';
+                                    table_body += '<td>' + price.sceond_class_seat_price + '</td>';
+                                    table_body += '<td><button class="edit-train-btn" data-train-id="' + price.train_id + '" data-start-station="' + price.start_station + '" data-end-station="' + price.end_station + '">修改</button></td>';
+                                    table_body += '</tr>';
+                                });
+                                $('#price_table tbody').html(table_body);
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                }
+                else {
+                    loadPrices();
+                }
+            });
+
+            // 修改票价
+            $(document).on('click', '.edit-train-btn', function() {
+                const row = $(this).closest('tr'); // 获取当前行
+
+                // 从当前行获取票价信息
+                const trainId = row.find('td:eq(0)').text();
+                const startStation = row.find('td:eq(1)').text();
+                const endStation = row.find('td:eq(2)').text();
+                const businessSeatPrice = row.find('td:eq(3)').text();
+                const firstClassSeatPrice = row.find('td:eq(4)').text();
+                const secondClassSeatPrice = row.find('td:eq(5)').text();
+
+                // 填充到修改弹窗中
+                $('#edit-train-id').val(trainId);
+                $('#edit-start-station').val(startStation);
+                $('#edit-end-station').val(endStation);
+                $('#edit-business-seat-price').val(businessSeatPrice);
+                $('#edit-first-class-seat-price').val(firstClassSeatPrice);
+                $('#edit-second-class-seat-price').val(secondClassSeatPrice);
+
+                $('#edit-price-modal').show();
+            });
+
+            $('#edit-price-form').on('submit', function(event) {
+                event.preventDefault();
+                const formData = $(this).serialize();
+                $.ajax({
+                    url: "{{ url_for('update_price') }}",
+                    method: "POST",
+                    data: formData,
+                    success: function(response) {
+                        $('#edit-price-modal').hide();
+                        if (response.status === 'success') {
+                            showAlert(response.message);
+                            loadPrices();
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            // 初始加载票价列表
+            loadPrices();
+
+            // 弹窗关闭功能
+            $('.modal .close').on('click', function() {
+                $(this).closest('.modal').hide();
+            });
+            });
+    </script>
+</body>

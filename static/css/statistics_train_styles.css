@@ -1,0 +1,460 @@
+body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: #f4f6f9;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+.wrapper {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+.sidebar {
+    width: 250px; /* 固定宽度 */
+    height: 100vh; /* 高度为视口高度 */
+    background: #34495e;
+    color: #ecf0f1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    position: fixed; /* 固定位置 */
+    left: 0;
+    top: 0;
+}
+.sidebar-header {
+    text-align: center;
+    padding: 20px 0;
+    background: #2c3e50;
+    width: 100%;
+    border-bottom: 1px solid #2c3e50;
+}
+.sidebar h2 {
+    margin: 0;
+    font-size: 1.5em;
+    font-weight: normal;
+}
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: auto 0; /* 中间对齐 */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+}
+.sidebar-menu li {
+    width: 80%;
+    margin: 10px auto; /* 使选项居中 */
+}
+.sidebar-menu li a.active {
+    background-color: #1abc9c;
+    color: #fff;
+}
+.sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ecf0f1;
+    padding: 15px 20px;
+    text-decoration: none;
+    transition: background 0.3s ease;
+    border: 1px solid #1abc9c;
+    border-radius: 25px; /* 圆角矩形 */
+    background: #2c3e50;
+}
+.sidebar-menu li a i {
+    margin-right: 10px;
+}
+.sidebar-menu li a:hover {
+    background: #1abc9c;
+    color: #fff;
+}
+.main_content {
+    flex: 1;
+    padding: 20px;
+    background: #ecf0f1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 250px; /* 留出导航栏的宽度 */
+}
+.header {
+    background: #34495e;
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+.content-wrapper {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+    overflow: hidden;
+}
+.form-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    flex: 0 0 300px; /* 固定宽度 */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.form-container h2 {
+    margin-bottom: 15px;
+}
+.form-container form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.form-container select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.form-container input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.form-container button {
+    padding: 10px;
+    background-color: #34495e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.form-container button:hover {
+    background-color: #2c3e50;
+}
+.user-list-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 82.1vh; /* 添加此行,限制最大高度为视口高度的 70% */
+    background: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.user-list-title {
+    text-align: center;
+    font-size: 1.5em;
+    margin-bottom: 10px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: #fff;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+table, th, td {
+    border: 1px solid #ddd;
+}
+table th, table td {
+    padding: 12px;
+    text-align: left;
+}
+table th {
+    background-color: #34495e;
+    color: white;
+}
+.delete-train-btn {
+    padding: 8px 12px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.delete-train-btn:hover {
+    background-color: #c0392b;
+}
+.edit-train-btn, .buy-ticket-btn, .refund-ticket-btn {
+    padding: 8px 12px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.3s ease;
+}
+.edit-train-btn:hover, .buy-ticket-btn:hover, .refund-ticket-btn:hover {
+    background-color: #2980b9;
+}
+
+/* 模态框样式 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    position: relative;
+}
+
+.modal-header {
+    background-color: #34495e;
+    color: #fff;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    text-align: center;
+    flex-grow: 1;
+}
+
+.modal-body {
+    padding: 20px;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.form-group-btn {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 20px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+    font-weight: bold;
+    background-color: #34495e;
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn:hover {
+    background-color: #2c3e50;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+.btn-secondary {
+    background-color: #bdc3c7;
+    color: #34495e;
+}
+
+.btn-secondary:hover {
+    background-color: #a6aaad;
+}
+
+.close {
+    font-size: 28px;
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.close:hover, .close:focus {
+    color: #ccc;
+}
+
+
+#stopovers-modal input[type="text"] {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+#stopovers-modal button {
+    padding: 5px 10px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#stopovers-modal button:hover {
+    background-color: #0056b3;
+}
+
+#stopovers-list .stopover-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    padding: 5px 10px;
+    background-color: #f8f9fa;
+    border-radius: 3px;
+}
+
+#stopovers-list .stopover-number {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+#stopovers-list .remove-stopover-btn {
+    margin-left: auto;
+    background-color: #dc3545;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+#stopovers-list .remove-stopover-btn:hover {
+    background-color: #c82333;
+}
+
+#save-stopovers-btn {
+    background-color: #28a745;
+}
+
+#save-stopovers-btn:hover {
+    background-color: #1e7e34;
+}
+
+#stopovers-modal .add-stopover {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+#stopovers-modal .add-stopover input[type="text"] {
+    width: 60%;
+    margin-right: 10px;
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+#stopovers-modal .add-stopover button {
+    padding: 4px 8px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+#stopovers-modal .add-stopover button:hover {
+    background-color: #0056b3;
+}
+
+/* 发车时刻表模态框样式 */
+#schedule-modal .modal-content {
+    max-width: 800px;
+}
+
+#schedule-modal .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+#schedule-modal .schedule-table th,
+#schedule-modal .schedule-table td {
+    padding: 8px;
+    text-align: center; /* 将文字居中 */
+    border-bottom: 1px solid #ddd;
+    color: #333; /* 更改文字颜色 */
+}
+
+#schedule-modal .schedule-table th {
+    background-color: #f2f2f2;
+    color: #333; /* 更改标题文字颜色 */
+}
+
+#schedule-modal .add-schedule-form {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* 居中对齐 */
+    gap: 10px;
+    margin-top: 20px;
+}
+
+#schedule-modal .add-schedule-form input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#schedule-modal .add-schedule-form button {
+    padding: 4px 8px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+#schedule-modal .add-schedule-form button:hover {
+    background-color: #2c3e50;
+}
+
+
+.seat-type-btns {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px; /* 调整按钮与表格之间的间距 */
+}

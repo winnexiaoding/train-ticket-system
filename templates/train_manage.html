@@ -1,0 +1,765 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>车次管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/train_manage_styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>导航栏</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('home') }}" class="{{ 'active' if active_link == 'home' else '' }}"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="{{ url_for('station_manage') }}" class="{{ 'active' if active_link == 'station_manage' else '' }}"><i class="fas fa-train"></i> 站点管理</a></li>
+                <li><a href="{{ url_for('train_manage') }}" class="{{ 'active' if active_link == 'train_manage' else '' }}"><i class="fas fa-train"></i> 车次管理</a></li>
+                <li><a href="{{ url_for('price_manage') }}" class="{{ 'active' if active_link == 'price_manage' else '' }}"><i class="fas fa-money-bill-alt"></i> 票价管理</a></li>
+                <li><a href="{{ url_for('sale_manage') }}" class="{{ 'active' if active_link == 'sale_manage' else '' }}"><i class="fas fa-shopping-cart"></i> 购票</a></li>
+                <li><a href="{{ url_for('refund_manage') }}" class="{{ 'active' if active_link == 'refund_manage' else '' }}"><i class="fas fa-undo"></i> 退票</a></li>
+                <li><a href="{{ url_for('statistics_train') }}" class="{{ 'active' if active_link == 'statistics_train' else '' }}"><i class="fas fa-chart-bar"></i> 车次销售统计</a></li>
+                <li><a href="{{ url_for('statistics_staff') }}" class="{{ 'active' if active_link == 'statistics_staff' else '' }}"><i class="fas fa-chart-bar"></i> 业务员销售统计</a></li>
+                <li><a href="{{ url_for('user_manage') }}" class="{{ 'active' if active_link == 'user_manage' else '' }}"><i class="fas fa-user"></i> 业务员管理</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+        <div class="main_content">
+            <div class="header">车次管理</div>
+            <div class="content-wrapper">
+                <div class="form-container">
+                    <div class="train_search">
+                        <h2>搜索车次</h2>
+                        <form id="train_search_form">
+                            <input type="text" name="train_id" placeholder="关键词">
+                            <button type="submit" class="btn">搜索</button>
+                        </form>
+                    </div>
+                    <button id="add-train-btn" class="btn">添加车次</button>
+                </div>
+
+                <div class="user-list-wrapper">
+                    <div class="user-list-title">车次列表</div>
+                    <table id="train_table">
+                        <thead>
+                            <tr>
+                                <th>车次号</th>
+                                <th>始发站</th>
+                                <th>终点站</th>
+                                <th>型号</th>
+                                <th>车厢数</th>
+                                <th>商务座数量</th>
+                                <th>一等座数量</th>
+                                <th>二等座数量</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 车次数据将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加车次弹窗 -->
+    <div id="add-train-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>添加车次</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="add-train-form">
+                    <div class="form-group">
+                        <label for="add-train-id">车次号</label>
+                        <input type="text" id="add-train-id" name="train_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-start-station">始发站</label>
+                        <input type="text" id="add-start-station" name="start_station" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-end-station">终点站</label>
+                        <input type="text" id="add-end-station" name="end_station" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-train-type">型号</label>
+                        <input type="text" id="add-train-type" name="train_type" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-num-carriages">车厢数</label>
+                        <input type="number" id="add-num-carriages" name="num_carriages" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-num-business-seats">商务座数量</label>
+                        <input type="number" id="add-num-business-seats" name="num_business_seats" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-num-first-class-seats">一等座数量</label>
+                        <input type="number" id="add-num-first-class-seats" name="num_first_class_seats" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-num-second-class-seats">二等座数量</label>
+                        <input type="number" id="add-num-second-class-seats" name="num_second_class_seats" required>
+                    </div>
+                    <div class="form-group form-group-btn">
+                        <button type="submit" class="btn">添加</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改车次弹窗 -->
+    <div id="edit-train-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>修改车次</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="edit-train-form">
+                    <input type="hidden" name="train_id" id="edit-train-id">
+                    <div class="form-group">
+                        <label for="edit-start-station">始发站</label>
+                        <input type="text" id="edit-start-station" name="start_station" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-end-station">终点站</label>
+                        <input type="text" id="edit-end-station" name="end_station" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-train-type">型号</label>
+                        <input type="text" id="edit-train-type" name="train_type" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-num-carriages">车厢数</label>
+                        <input type="number" id="edit-num-carriages" name="num_carriages" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-num-business-seats">商务座数量</label>
+                        <input type="number" id="edit-num-business-seats" name="num_business_seats" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-num-first-class-seats">一等座数量</label>
+                        <input type="number" id="edit-num-first-class-seats" name="num_first_class_seats" required>
+                        </div>
+                    <div class="form-group">
+                        <label for="edit-num-second-class-seats">二等座数量</label>
+                        <input type="number" id="edit-num-second-class-seats" name="num_second_class_seats" required>
+                    </div>
+                    <div class="form-group form-group-btn">
+                        <button type="submit" class="btn">修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 途经弹窗 -->
+    <div id="stopovers-modal" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>修改途经站点</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="stopover-table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>站点编号</th>
+                                <th>站点名</th>
+                                <th>停靠时间(分钟)</th>
+                                <th>到达下一站时间(分钟)</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stopovers-list">
+                            <!-- 途经站点列表将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="add-stopover-form d-flex justify-content-center">
+                    <input type="text" id="new-stopover-name" placeholder="新站点名称" required>
+                    <input type="number" id="new-stop-duration" placeholder="停靠时间(分钟)" min="0" required>
+                    <input type="number" id="new-time-to-next-stopover" placeholder="到达下一站时间(分钟)" min="0" required>
+                    <button id="add-stopover-btn">添加</button>
+                </div>
+                <div class="form-group form-group-btn">
+                    <button id="save-stopovers-btn" class="btn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发车时刻表模态框 -->
+    <div id="schedule-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>发车时刻表</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>车次ID</th>
+                            <th>出发时间</th>
+{#                            <th>到达时间</th>#}
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 时刻表数据将由JS填充 -->
+                    </tbody>
+                </table>
+                <div class="add-schedule-form">
+                    <input type="hidden" id="schedule-train-id">
+                    <div>
+                        <label for="schedule-departure-time">出发时间:</label>
+                        <input type="datetime-local" id="schedule-departure-time">
+                    </div>
+{#                    <div>#}
+{#                        <label for="schedule-arrival-time">到达时间:</label>#}
+{#                        <input type="datetime-local" id="schedule-arrival-time">#}
+{#                    </div>#}
+                    <button id="add-schedule-btn">添加发车</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改站点停靠时间模态框 -->
+    <div id="edit-stopover-time-modal" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>修改站点停靠时间</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="stopover-time-table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>站点名称</th>
+                                <th>停靠时间(分钟)</th>
+                                <th>到达下一站时间(分钟)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stopover-time-list">
+                            <!-- 站点时间列表将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="form-group form-group-btn">
+                    <button id="save-stopover-time-btn" class="btn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认删除弹窗 -->
+    <div id="delete-confirm-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>确认删除</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除该车次吗？此操作不可恢复。</p>
+                <div class="form-group form-group-btn">
+                    <button id="delete-confirm-btn" class="btn btn-danger">确认删除</button>
+                    <button id="delete-cancel-btn" class="btn btn-secondary">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除发车确认弹窗 -->
+    <div id="delete-schedule-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>确认删除</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除该发车吗？此操作不可恢复。</p>
+                <div class="form-group form-group-btn">
+                    <button id="delete-schedule-confirm-btn" class="btn btn-danger">确认删除</button>
+                    <button id="delete-schedule-cancel-btn" class="btn btn-secondary">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        $(document).ready(function(){
+            function showAlert(message) {
+                const alertModal = $('<div class="modal"><div class="modal-content"><div class="modal-header"><h2>提示</h2><span class="close">&times;</span></div><div class="modal-body"><p>' + message + '</p></div></div></div>');
+                $('body').append(alertModal);
+                alertModal.show();
+
+                // 关闭模态框
+                alertModal.find('.close').on('click', function() {
+                    alertModal.remove();
+                });
+
+                // 点击模态框外部区域关闭
+                $(window).on('click', function(event) {
+                    if (event.target === alertModal[0]) {
+                        alertModal.remove();
+                    }
+                });
+            }
+
+            // 加载车次列表
+            function loadTrains(){
+                $.ajax({
+                    url: "{{ url_for('show_all_trains') }}",
+                    method: "POST",
+                    success: function(response){
+                        if(response.status === 'success'){
+                            let trains = response.data;
+                            let table_body = '';
+                            trains.forEach(function(train){
+                                table_body += '<tr>';
+                                table_body += '<td>' + train.train_id + '</td>';
+                                table_body += '<td>' + train.start_station + '</td>';
+                                table_body += '<td>' + train.end_station + '</td>';
+                                table_body += '<td>' + train.train_type + '</td>';
+                                table_body += '<td>' + train.num_carriages + '</td>';
+                                table_body += '<td>' + train.num_business_seats + '</td>';
+                                table_body += '<td>' + train.num_first_class_seats + '</td>';
+                                table_body += '<td>' + train.num_second_class_seats + '</td>';
+                                table_body += '<td>';
+                                table_body += '<button class="edit-train-btn" data-train-id="' + train.train_id + '">修改</button>';
+                                table_body += '<button class="stopovers-btn" data-train-id="' + train.train_id + '">途经站点</button>';
+                                table_body += '<button class="schedule-btn" data-train-id="' + train.train_id + '">查看发车</button>';
+                                table_body += '<button class="delete-train-btn" data-train-id="' + train.train_id + '">删除</button>';
+                                table_body += '</td>';
+                                table_body += '</tr>';
+                            });
+                            $('#train_table tbody').html(table_body);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            }
+
+            // 搜索车次
+            $('#train_search_form').on('submit', function(event){
+                event.preventDefault();
+                var searchQuery = $(this).find('input[name="train_id"]').val();
+                $.ajax({
+                    url: "{{ url_for('train_search') }}",
+                    method: "POST",
+                    data: { search_query: searchQuery },
+                    success: function(response){
+                        if(response.status === 'success'){
+                            let trains = response.data;
+                            let table_body = '';
+                            trains.forEach(function(train){
+                                table_body += '<tr>';
+                                table_body += '<td>' + train.train_id + '</td>';
+                                table_body += '<td>' + train.start_station + '</td>';
+                                table_body += '<td>' + train.end_station + '</td>';
+                                table_body += '<td>' + train.train_type + '</td>';
+                                table_body += '<td>' + train.num_carriages + '</td>';
+                                table_body += '<td>' + train.num_business_seats + '</td>';
+                                table_body += '<td>' + train.num_first_class_seats + '</td>';
+                                table_body += '<td>' + train.num_second_class_seats + '</td>';
+                                table_body += '<td>';
+                                table_body += '<button class="edit-train-btn" data-train-id="' + train.train_id + '">修改</button>';
+                                table_body += '<button class="stopovers-btn" data-train-id="' + train.train_id + '">途经站点</button>';
+                                table_body += '<button class="schedule-btn" data-train-id="' + train.train_id + '">查看发车</button>';
+                                table_body += '<button class="delete-train-btn" data-train-id="' + train.train_id + '">删除</button>';
+                                table_body += '</td>';
+                                table_body += '</tr>';
+                            });
+                            $('#train_table tbody').html(table_body);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            // 删除车次
+            let deleteTrainId;
+            $(document).on('click', '.delete-train-btn', function(){
+                deleteTrainId = $(this).data('train-id');
+                $('#delete-confirm-modal').show();
+            });
+
+            $('#delete-confirm-btn').on('click', function(){
+                $.ajax({
+                    url: "{{ url_for('delete_train') }}",
+                    method: "POST",
+                    data: { train_id: deleteTrainId },
+                    success: function(response){
+                        $('#delete-confirm-modal').hide();
+                        if(response.status === 'success'){
+                            showAlert(response.message);
+                            loadTrains();
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            $('#delete-cancel-btn').on('click', function(){
+                $('#delete-confirm-modal').hide();
+            });
+
+            // 修改车次
+            $(document).on('click', '.edit-train-btn', function() {
+                const row = $(this).closest('tr'); // 获取当前行
+
+                // 从当前行获取车次信息
+                const trainId = row.find('td:eq(0)').text();
+                const startStation = row.find('td:eq(1)').text();
+                const endStation = row.find('td:eq(2)').text();
+                const trainType = row.find('td:eq(3)').text();
+                const numCarriages = row.find('td:eq(4)').text();
+                const numBusinessSeats = row.find('td:eq(5)').text();
+                const numFirstClassSeats = row.find('td:eq(6)').text();
+                const numSecondClassSeats = row.find('td:eq(7)').text();
+
+                // 填充到修改弹窗中
+                $('#edit-train-id').val(trainId);
+                $('#edit-start-station').val(startStation);
+                $('#edit-end-station').val(endStation);
+                $('#edit-train-type').val(trainType);
+                $('#edit-num-carriages').val(numCarriages);
+                $('#edit-num-business-seats').val(numBusinessSeats);
+                $('#edit-num-first-class-seats').val(numFirstClassSeats);
+                $('#edit-num-second-class-seats').val(numSecondClassSeats);
+
+                $('#edit-train-modal').show();
+            });
+
+            $('#edit-train-form').on('submit', function(event) {
+                event.preventDefault();
+                const formData = $(this).serialize();
+                $.ajax({
+                    url: "{{ url_for('edit_train') }}",
+                    method: "POST",
+                    data: formData,
+                    success: function(response) {
+                        $('#edit-train-modal').hide();
+                        if(response.status === 'success') {
+                            showAlert(response.message);
+                            loadTrains();
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            // 添加车次
+            $('#add-train-btn').on('click', function(){
+                $('#add-train-id').val('');
+                $('#add-start-station').val('');
+                $('#add-end-station').val('');
+                $('#add-train-type').val('');
+                $('#add-num-carriages').val('');
+                $('#add-num-business-seats').val('');
+                $('#add-num-first-class-seats').val('');
+                $('#add-num-second-class-seats').val('');
+                $('#add-train-modal').show();
+            });
+
+            $('#add-train-form').on('submit', function(event){
+                event.preventDefault();
+                const formData = $(this).serialize();
+                $.ajax({
+                    url: "{{ url_for('train_add') }}",
+                    method: "POST",
+                    data: formData,
+                    success: function(response){
+                        $('#add-train-modal').hide();
+                        if(response.status === 'success'){
+                            showAlert(response.message);
+                            loadTrains();
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            let currentTrainId;
+
+            // 显示途经站点模态框
+            $(document).on('click', '.stopovers-btn', function() {
+                currentTrainId = $(this).data('train-id');
+                $.ajax({
+                    url: "{{ url_for('get_train_stopovers') }}",
+                    method: "POST",
+                    data: { train_id: currentTrainId },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            let stopovers = response.data;
+                            let stopoversList = '';
+                            stopovers.forEach(function(stopover, index) {
+                                stopoversList += `<tr data-stopover-index="${index}">
+                                    <td>${index + 1}</td>
+                                    <td><input type="text" class="stopover-name" value="${stopover.station_name}"></td>
+                                    <td><input type="number" class="stop-duration" value="${stopover.stop_duration}" min="0"></td>
+                                    <td><input type="number" class="time-to-next-stopover" value="${stopover.time_to_next_stopover}" min="0"></td>
+                                    <td><button class="remove-stopover-btn">删除</button></td>
+                                </tr>`;
+                            });
+                            $('#stopovers-list').html(stopoversList);
+                            $('#stopovers-modal').show();
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            // 添加新的途经站点
+            $('#add-stopover-btn').on('click', function() {
+                let newStopoverName = $('#new-stopover-name').val().trim();
+                let newStopDuration = $('#new-stop-duration').val().trim();
+                let newTimeToNextStopover = $('#new-time-to-next-stopover').val().trim();
+
+                if (newStopoverName && newStopDuration && newTimeToNextStopover) {
+                    let stopoversList = $('#stopovers-list');
+                    let lastIndex = stopoversList.find('tr').length;
+                    stopoversList.append(`<tr data-stopover-index="${lastIndex}">
+                        <td>${lastIndex + 1}</td>
+                        <td><input type="text" class="stopover-name" value="${newStopoverName}"></td>
+                        <td><input type="number" class="stop-duration" value="${newStopDuration}" min="0"></td>
+                        <td><input type="number" class="time-to-next-stopover" value="${newTimeToNextStopover}" min="0"></td>
+                        <td><button class="remove-stopover-btn">删除</button></td>
+                    </tr>`);
+                    $('#new-stopover-name').val('');
+                    $('#new-stop-duration').val('');
+                    $('#new-time-to-next-stopover').val('');
+                }
+            });
+
+            // 删除途经站点
+            $(document).on('click', '.remove-stopover-btn', function() {
+                $(this).closest('tr').remove();
+                $('#stopovers-list tr').each(function(index) {
+                    $(this).find('td:first').text(index + 1);
+                    $(this).attr('data-stopover-index', index);
+                });
+            });
+
+            // 保存途经站点
+            $('#save-stopovers-btn').on('click', function() {
+                let stopovers = [];
+                $('#stopovers-list tr').each(function() {
+                    let stopoverIndex = $(this).data('stopover-index');
+                    let stopoverName = $(this).find('.stopover-name').val();
+                    let stopDuration = $(this).find('.stop-duration').val();
+                    let timeToNextStopover = $(this).find('.time-to-next-stopover').val();
+                    stopovers.push({
+                        'station_name': stopoverName,
+                        'stop_duration': parseInt(stopDuration),
+                        'time_to_next_stopover': parseInt(timeToNextStopover)
+                    });
+                });
+
+                $.ajax({
+                    url: "{{ url_for('update_train_stopovers') }}",
+                    method: "POST",
+                    data: { train_id: currentTrainId, stopovers: JSON.stringify(stopovers) },
+                    success: function(response) {
+                        $('#stopovers-modal').hide();
+                        if (response.status === 'success') {
+                            showAlert(response.message);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            let currentTrainIdForSchedule;
+
+            // 显示发车时刻表模态框
+            $(document).on('click', '.schedule-btn', function() {
+                currentTrainIdForSchedule = $(this).data('train-id');
+                $('#schedule-train-id').val(currentTrainIdForSchedule);
+                loadSchedules(currentTrainIdForSchedule);
+                $('#schedule-modal').show();
+            });
+
+            // 加载发车时刻表
+            function loadSchedules(trainId) {
+                $.ajax({
+                    url: "{{ url_for('get_schedule_by_train_id') }}",
+                    method: "POST",
+                    data: { train_id: trainId },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            let schedules = response.data;
+                            let tableBody = '';
+                            schedules.forEach(function(schedule, index) {
+                                //将date时间减少8小时
+                                schedule.departure_time = new Date(schedule.departure_time);
+                                schedule.departure_time.setHours(schedule.departure_time.getHours() - 8);
+
+                                const departureTime = schedule.departure_time.toLocaleString();
+                                tableBody += `<tr>
+                                    <td>${index + 1}</td>
+                                    <td>${schedule.train_id}</td>
+                                    <td>${departureTime}</td>
+                                    <td>
+                                        <button class="edit-stopover-time-btn" data-schedule-id="${schedule.schedule_id}">修改时间</button>
+                                        <button class="delete-schedule-btn" data-schedule-id="${schedule.schedule_id}">删除</button>
+                                    </td>
+                                </tr>`;
+                            });
+                            $('#schedule-modal .schedule-table tbody').html(tableBody);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            }
+
+            // 添加发车
+            $('#add-schedule-btn').on('click', function() {
+                const trainId = $('#schedule-train-id').val();
+                const departureTime = $('#schedule-departure-time').val();
+
+                if (departureTime) {
+                    const departure = new Date(departureTime);
+
+                    $.ajax({
+                        url: "{{ url_for('add_schedule') }}",
+                        method: "POST",
+                        data: { train_id: trainId, departure_time: departureTime},
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                showAlert(response.message);
+                                loadSchedules(trainId);
+                                $('#schedule-departure-time').val('');
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                } else {
+                    showAlert('请选择出发时间');
+                }
+            });
+
+            let currentScheduleId;
+            // 删除发车
+            $(document).on('click', '.delete-schedule-btn', function() {
+                currentScheduleId = $(this).data('schedule-id');
+                $('#delete-schedule-modal').show();
+            });
+
+            $('#delete-schedule-confirm-btn').on('click', function() {
+                $.ajax({
+                    url: "{{ url_for('delete_schedule') }}",
+                    method: "POST",
+                    data: { schedule_id: currentScheduleId },
+                    success: function(response) {
+                        $('#delete-schedule-modal').hide();
+                        if (response.status === 'success') {
+                            showAlert(response.message);
+                            loadSchedules(currentTrainIdForSchedule);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            $('#delete-schedule-cancel-btn').on('click', function() {
+                $('#delete-schedule-modal').hide();
+            });
+
+            // 初始加载车次列表
+            loadTrains();
+
+            let currentScheduleIdForStopoverTime;
+
+            // 显示修改站点停靠时间模态框
+            $(document).on('click', '.edit-stopover-time-btn', function() {
+                currentScheduleIdForStopoverTime = $(this).data('schedule-id');
+                loadStopoverTimes(currentScheduleIdForStopoverTime);
+                $('#edit-stopover-time-modal').show();
+            });
+
+            // 加载站点停靠时间数据
+            function loadStopoverTimes(scheduleId) {
+                $.ajax({
+                    url: "{{ url_for('get_stopover_times_by_schedule_id') }}",
+                    method: "POST",
+                    data: { schedule_id: scheduleId },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            let stopoverTimes = response.data;
+                            let tableBody = '';
+                            stopoverTimes.forEach(function(stopoverTime) {
+                                tableBody += `<tr>
+                                    <td>${stopoverTime.station_name}</td>
+                                    <td><input type="number" class="stop-duration" value="${stopoverTime.stop_duration}" min="0"></td>
+                                    <td><input type="number" class="time-to-next-stopover" value="${stopoverTime.time_to_next_stopover}" min="0"></td>
+                                </tr>`;
+                            });
+                            $('#stopover-time-list').html(tableBody);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            }
+
+            // 保存站点停靠时间
+            $('#save-stopover-time-btn').on('click', function() {
+                let stopoverTimes = [];
+                $('#stopover-time-list tr').each(function() {
+                    let stopoverName = $(this).find('td:first').text();
+                    let stopDuration = $(this).find('.stop-duration').val();
+                    let timeToNextStopover = $(this).find('.time-to-next-stopover').val();
+                    stopoverTimes.push({
+                        'station_name': stopoverName,
+                        'stop_duration': parseInt(stopDuration),
+                        'time_to_next_stopover': parseInt(timeToNextStopover)
+                    });
+                });
+
+                $.ajax({
+                    url: "{{ url_for('edit_schedule_stopover_time') }}",
+                    method: "POST",
+                    data: { schedule_id: currentScheduleIdForStopoverTime, stopovers: JSON.stringify(stopoverTimes) },
+                    success: function(response) {
+                        $('#edit-stopover-time-modal').hide();
+                        if (response.status === 'success') {
+                            showAlert(response.message);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            // 弹窗关闭功能
+            $('.modal .close').on('click', function() {
+                $(this).closest('.modal').hide();
+            });
+        })
+    </script>
+</body>
+</html>

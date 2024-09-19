@@ -1,0 +1,121 @@
+body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: #f4f6f9;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+.wrapper {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 250px; /* 固定宽度 */
+    height: 100vh; /* 高度为视口高度 */
+    background: #34495e;
+    color: #ecf0f1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    position: fixed; /* 固定位置 */
+    left: 0;
+    top: 0;
+}
+
+.sidebar-header {
+    text-align: center;
+    padding: 20px 0;
+    background: #2c3e50;
+    width: 100%;
+    border-bottom: 1px solid #2c3e50;
+}
+
+.sidebar h2 {
+    margin: 0;
+    font-size: 1.5em;
+    font-weight: normal;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: auto 0; /* 中间对齐 */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+}
+
+.sidebar-menu li {
+    width: 80%;
+    margin: 10px auto; /* 使选项居中 */
+}
+
+.sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ecf0f1;
+    padding: 15px 20px;
+    text-decoration: none;
+    transition: background 0.3s ease;
+    border: 1px solid #1abc9c;
+    border-radius: 25px; /* 圆角矩形 */
+    background: #2c3e50;
+}
+
+.sidebar-menu li a.active {
+    background-color: #1abc9c;
+    color: #fff;
+}
+
+.sidebar-menu li a i {
+    margin-right: 10px;
+}
+
+.sidebar-menu li a:hover {
+    background: #1abc9c;
+    color: #fff;
+}
+
+.main_content {
+    background-size: cover;
+    flex: 1;
+    padding: 20px;
+    background: #ecf0f1 url('../images/train_bg.png') no-repeat center;
+    background-size: 50%;
+    display: flex;
+    flex-direction: column;
+    margin-left: 250px; /* 留出导航栏的宽度 */
+}
+
+.header {
+    background: #34495e;
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.info {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.info h1 {
+    margin-top: 0;
+    color: #333;
+}
+
+.info p {
+    color: #777;
+}

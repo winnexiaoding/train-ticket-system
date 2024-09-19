@@ -1,0 +1,225 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>退票</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/refund_manage_styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>导航栏</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('home') }}" class="{{ 'active' if active_link == 'home' else '' }}"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="{{ url_for('station_manage') }}" class="{{ 'active' if active_link == 'station_manage' else '' }}"><i class="fas fa-train"></i> 站点管理</a></li>
+                <li><a href="{{ url_for('train_manage') }}" class="{{ 'active' if active_link == 'train_manage' else '' }}"><i class="fas fa-train"></i> 车次管理</a></li>
+                <li><a href="{{ url_for('price_manage') }}" class="{{ 'active' if active_link == 'price_manage' else '' }}"><i class="fas fa-money-bill-alt"></i> 票价管理</a></li>
+                <li><a href="{{ url_for('sale_manage') }}" class="{{ 'active' if active_link == 'sale_manage' else '' }}"><i class="fas fa-shopping-cart"></i> 购票</a></li>
+                <li><a href="{{ url_for('refund_manage') }}" class="{{ 'active' if active_link == 'refund_manage' else '' }}"><i class="fas fa-undo"></i> 退票</a></li>
+                <li><a href="{{ url_for('statistics_train') }}" class="{{ 'active' if active_link == 'statistics_train' else '' }}"><i class="fas fa-chart-bar"></i> 车次销售统计</a></li>
+                <li><a href="{{ url_for('statistics_staff') }}" class="{{ 'active' if active_link == 'statistics_staff' else '' }}"><i class="fas fa-chart-bar"></i> 业务员销售统计</a></li>
+                <li><a href="{{ url_for('user_manage') }}" class="{{ 'active' if active_link == 'user_manage' else '' }}"><i class="fas fa-user"></i> 业务员管理</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+        <div class="main_content">
+            <div class="header">退票</div>
+            <div class="content-wrapper">
+                <div class="form-container">
+                    <h2>搜索车票</h2>
+                    <form id="search-form">
+                        <input type="text" name="passenger_id" placeholder="乘客ID">
+                        <input type="text" name="staff_id" placeholder="售票员ID">
+                        <input type="text" name="schedule_id" placeholder="发车ID">
+                        <input type="text" name="start_station" placeholder="出发站">
+                        <input type="text" name="end_station" placeholder="到达站">
+                        <input type="text" name="seat_class" placeholder="座位类型">
+                        <input type="text" name="operation_time" placeholder="操作时间">
+                        <button type="submit" class="btn">搜索</button>
+                    </form>
+                </div>
+                <div class="user-list-wrapper">
+                    <div class="user-list-title">车票列表</div>
+                    <table id="ticket-table">
+                        <thead>
+                            <tr>
+                                <th>票ID</th>
+                                <th>乘客ID</th>
+                                <th>售票员ID</th>
+                                <th>发车ID</th>
+                                <th>出发站</th>
+                                <th>到达站</th>
+                                <th>座位类型</th>
+                                <th>票价</th>
+                                <th>操作时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 车票数据将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 退票弹窗 -->
+    <div id="refund-ticket-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>确认退票</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>确定要退票吗?</p>
+                <div class="form-group form-group-btn">
+                    <button id="confirm-refund-btn" class="btn btn-danger">确认退票</button>
+                    <button class="btn btn-secondary" data-dismiss="modal">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            function showAlert(message) {
+                const alertModal = $('<div class="modal"><div class="modal-content"><div class="modal-header"><h2>提示</h2><span class="close">&times;</span></div><div class="modal-body"><p>' + message + '</p></div></div></div>');
+                $('body').append(alertModal);
+                alertModal.show();
+
+                // 关闭模态框
+                alertModal.find('.close').on('click', function() {
+                    alertModal.remove();
+                });
+
+                // 点击模态框外部区域关闭
+                $(window).on('click', function(event) {
+                    if (event.target === alertModal[0]) {
+                        alertModal.remove();
+                    }
+                });
+            }
+
+            // 搜索车票
+            $('#search-form').on('submit', function(event) {
+                event.preventDefault();
+                const formData = $(this).serialize();
+                $.ajax({
+                    url: "{{ url_for('search_tickets') }}",
+                    method: "POST",
+                    data: formData,
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            let data = response.data;
+                            let table_body = '';
+                            data.forEach(function(ticket) {
+                                //将date时间减少8小时
+                                ticket.operation_time = new Date(ticket.operation_time);
+                                ticket.operation_time.setHours(ticket.operation_time.getHours() - 8);
+                                table_body += '<tr>';
+                                table_body += '<td>' + ticket.ticket_id + '</td>';
+                                table_body += '<td>' + ticket.passenger_id + '</td>';
+                                table_body += '<td>' + ticket.staff_id + '</td>';
+                                table_body += '<td>' + ticket.schedule_id + '</td>';
+                                table_body += '<td>' + ticket.start_station + '</td>';
+                                table_body += '<td>' + ticket.end_station + '</td>';
+                                table_body += '<td>' + ticket.seat_class + '</td>';
+                                table_body += '<td>' + ticket.ticket_price + '</td>';
+                                table_body += '<td>' + ticket.operation_time.toLocaleString() + '</td>';
+                                table_body += '<td><button class="refund-ticket-btn" data-ticket-id="' + ticket.ticket_id + '">退票</button></td>';
+                                table_body += '</tr>';
+                            });
+                            $('#ticket-table tbody').html(table_body);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            let selectedTicketId;
+
+            // 退票按钮单击事件
+            $(document).on('click', '.refund-ticket-btn', function() {
+                selectedTicketId = $(this).data('ticket-id');
+                $('#refund-ticket-modal').show();
+            });
+
+            $(document).on('click', '[data-dismiss="modal"]', function() {
+                $('#refund-ticket-modal').hide();
+            });
+
+
+            // 确认退票按钮单击事件
+            $('#confirm-refund-btn').on('click', function() {
+                $.ajax({
+                    url: "{{ url_for('refund_ticket') }}",
+                    method: "POST",
+                    data: {ticket_id: selectedTicketId},
+                    success: function(response) {
+                        $('#refund-ticket-modal').hide();
+                        if (response.status === 'success') {
+                            showAlert('退票成功');
+                            load_tickets(); // 重新加载车次列表
+                        } else {
+                            showAlert('退票失败');
+                        }
+                    }
+                });
+            });
+            // 关闭弹窗按钮单击事件
+            $(document).on('click', '.close', function() {
+                $(this).closest('.modal').hide();
+            });
+
+            // 点击弹窗外部区域关闭弹窗
+            $(window).on('click', function(event) {
+                if (event.target.classList.contains('modal')) {
+                    $('.modal').hide();
+                }
+            });
+        });
+
+        function load_tickets() {
+            // 加载所有车票
+            $.ajax({
+                url: "{{ url_for('show_all_tickets') }}",
+                method: "POST",
+                success: function(response) {
+                    if (response.status === 'success') {
+                        let data = response.data;
+                        let table_body = '';
+                        data.forEach(function(ticket) {
+                            //将date时间减少8小时
+                            ticket.operation_time = new Date(ticket.operation_time);
+                            ticket.operation_time.setHours(ticket.operation_time.getHours() - 8);
+                            table_body += '<tr>';
+                            table_body += '<td>' + ticket.ticket_id + '</td>';
+                            table_body += '<td>' + ticket.passenger_id + '</td>';
+                            table_body += '<td>' + ticket.staff_id + '</td>';
+                            table_body += '<td>' + ticket.schedule_id + '</td>';
+                            table_body += '<td>' + ticket.start_station + '</td>';
+                            table_body += '<td>' + ticket.end_station + '</td>';
+                            table_body += '<td>' + ticket.seat_class + '</td>';
+                            table_body += '<td>' + ticket.ticket_price + '</td>';
+                            table_body += '<td>' + (ticket.operation_time).toLocaleString() + '</td>';
+                            table_body += '<td><button class="refund-ticket-btn" data-ticket-id="' + ticket.ticket_id + '">退票</button></td>';
+                            table_body += '</tr>';
+                        });
+                        $('#ticket-table tbody').html(table_body);
+                    } else {
+                        showAlert(response.message);
+                    }
+                }
+            });
+        }
+
+        load_tickets();
+
+    </script>
+</body>

@@ -1,0 +1,337 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>业务员管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/user_manage_styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar-container">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>导航栏</h2>
+                </div>
+                <ul class="sidebar-menu">
+                    <li><a href="{{ url_for('home') }}" class="{{ 'active' if active_link == 'home' else '' }}"><i class="fas fa-home"></i> 首页</a></li>
+                    <li><a href="{{ url_for('station_manage') }}" class="{{ 'active' if active_link == 'station_manage' else '' }}"><i class="fas fa-train"></i> 站点管理</a></li>
+                    <li><a href="{{ url_for('train_manage') }}" class="{{ 'active' if active_link == 'train_manage' else '' }}"><i class="fas fa-train"></i> 车次管理</a></li>
+                    <li><a href="{{ url_for('price_manage') }}" class="{{ 'active' if active_link == 'price_manage' else '' }}"><i class="fas fa-money-bill-alt"></i> 票价管理</a></li>
+                    <li><a href="{{ url_for('sale_manage') }}" class="{{ 'active' if active_link == 'sale_manage' else '' }}"><i class="fas fa-shopping-cart"></i> 购票</a></li>
+                    <li><a href="{{ url_for('refund_manage') }}" class="{{ 'active' if active_link == 'refund_manage' else '' }}"><i class="fas fa-undo"></i> 退票</a></li>
+                    <li><a href="{{ url_for('statistics_train') }}" class="{{ 'active' if active_link == 'statistics_train' else '' }}"><i class="fas fa-chart-bar"></i> 车次销售统计</a></li>
+                    <li><a href="{{ url_for('statistics_staff') }}" class="{{ 'active' if active_link == 'statistics_staff' else '' }}"><i class="fas fa-chart-bar"></i> 业务员销售统计</a></li>
+                    <li><a href="{{ url_for('user_manage') }}" class="{{ 'active' if active_link == 'user_manage' else '' }}"><i class="fas fa-user"></i> 业务员管理</a></li>
+                    <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+            </div>
+        </div>
+        <div class="main_content">
+            <div class="header">业务员管理</div>
+            <div class="content-wrapper">
+                <div class="form-container">
+                    <div class="user_search">
+                        <h2>搜索业务员</h2>
+                        <form id="user_search_form">
+                            <input type="text" name="name" placeholder="用户名">
+                            <button type="submit">搜索</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="user-list-wrapper">
+                    <div class="user-list-title">业务员列表</div>
+                    <table id="user_table">
+                        <thead>
+                            <tr>
+                                <th>UID</th>
+                                <th>姓名</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 用户数据将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改用户名弹窗 -->
+    <div id="edit-username-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>修改姓名</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="edit-username-form">
+                    <input type="hidden" name="uid" id="edit-username-uid">
+                    <div class="form-group">
+                        <label for="edit-username-password">密码:</label>
+                        <input type="password" id="edit-username-password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-username-newname">新姓名:</label>
+                        <input type="text" id="edit-username-newname" name="newname" required>
+                    </div>
+                    <div class="form-group form-group-btn">
+                        <button type="submit" class="btn">修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改密码弹窗 -->
+    <div id="edit-password-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>修改密码</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="edit-password-form">
+                    <input type="hidden" name="uid" id="edit-password-uid">
+                    <div class="form-group">
+                        <label for="edit-password-oldpassword">旧密码:</label>
+                        <input type="password" id="edit-password-oldpassword" name="oldpassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-password-newpassword">新密码:</label>
+                        <input type="password" id="edit-password-newpassword" name="newpassword" required>
+                    </div>
+                    <div class="form-group form-group-btn">
+                        <button type="submit" class="btn">修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认删除弹窗 -->
+    <div id="delete-confirm-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>确认删除</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除该业务员吗？此操作不可恢复。</p>
+                <div class="form-group form-group-btn">
+                    <button id="delete-confirm-btn" class="btn btn-danger">确认删除</button>
+                    <button id="delete-cancel-btn" class="btn btn-secondary">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function(){
+            function showAlert(message) {
+                const alertModal = $('<div class="modal"><div class="modal-content"><div class="modal-header"><h2>提示</h2><span class="close">&times;</span></div><div class="modal-body"><p>' + message + '</p></div></div></div>');
+                $('body').append(alertModal);
+                alertModal.show();
+
+                // 关闭模态框
+                alertModal.find('.close').on('click', function() {
+                    alertModal.remove();
+                });
+
+                // 点击模态框外部区域关闭
+                $(window).on('click', function(event) {
+                    if (event.target === alertModal[0]) {
+                        alertModal.remove();
+                    }
+                });
+            }
+
+            function showErrorModal(message) {
+                const errorModal = $('<div class="modal"><div class="modal-content"><div class="modal-header"><h2>错误</h2><span class="close">&times;</span></div><div class="modal-body"><p>' + message + '</p></div></div></div>');
+                $('body').append(errorModal);
+                errorModal.show();
+
+                // 关闭模态框
+                errorModal.find('.close').on('click', function() {
+                    errorModal.remove();
+                });
+
+                // 点击模态框外部区域关闭
+                $(window).on('click', function(event) {
+                    if (event.target === errorModal[0]) {
+                        errorModal.remove();
+                    }
+                });
+            }
+
+            // 加载用户列表
+            function loadUsers(){
+                $.ajax({
+                    url: "{{ url_for('show_all_users') }}",
+                    method: "POST",
+                    success: function(response){
+                        if(response.status === 'success'){
+                            let users = response.data;
+                            let table_body = '';
+                            users.forEach(function(user){
+                                table_body += '<tr>';
+                                table_body += '<td>' + user.uid + '</td>';
+                                table_body += '<td>' + user.name + '</td>';
+                                table_body += '<td>';
+                                table_body += '<button class="edit-username-btn" data-uid="' + user.uid + '">修改姓名</button>';
+                                table_body += '<button class="edit-password-btn" data-uid="' + user.uid + '">修改密码</button>';
+                                table_body += '<button class="delete-user-btn" data-uid="' + user.uid + '">删除</button>';
+                                table_body += '</td>';
+                                table_body += '</tr>';
+                            });
+                            $('#user_table tbody').html(table_body);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            }
+
+            // 搜索用户
+            $('#user_search_form').on('submit', function(event){
+                event.preventDefault();
+                var searchQuery = $(this).find('input[name="name"]').val();
+                $.ajax({
+                    url: "{{ url_for('user_search') }}",
+                    method: "POST",
+                    data: $(this).serialize(),
+                    success: function(response){
+                        if(response.status === 'success'){
+                            let users = response.data;
+                            let table_body = '';
+                            users.forEach(function(user){
+                                table_body += '<tr>';
+                                table_body += '<td>' + user.uid + '</td>';
+                                table_body += '<td>' + user.name + '</td>';
+                                table_body += '<td>';
+                                table_body += '<button class="edit-username-btn" data-uid="' + user.uid + '">修改姓名</button>';
+                                table_body += '<button class="edit-password-btn" data-uid="' + user.uid + '">修改密码</button>';
+                                table_body += '<button class="delete-user-btn" data-uid="' + user.uid + '">删除</button>';
+                                table_body += '</td>';
+                                table_body += '</tr>';
+                            });
+                            $('#user_table tbody').html(table_body);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            // 删除用户
+            let deleteUserUid;
+            $(document).on('click', '.delete-user-btn', function(){
+                deleteUserUid = $(this).data('uid');
+                $('#delete-confirm-modal').show();
+            });
+
+            $('#delete-confirm-btn').on('click', function(){
+                $.ajax({
+                    url: "{{ url_for('delete_user') }}",
+                    method: "POST",
+                    data: { uid: deleteUserUid },
+                    success: function(response){
+                        $('#delete-confirm-modal').hide();
+                        if(response.status === 'success'){
+                            loadUsers();
+                        } else {
+                            showAlert(response.message);
+                        }
+                        // 检查是否是当前用户
+                        if (deleteUserUid == "{{ session['username'] }}") {
+                            window.location.href = "{{ url_for('logout') }}";
+                        }
+                    }
+                });
+            });
+
+            $('#delete-cancel-btn').on('click', function(){
+                $('#delete-confirm-modal').hide();
+            });
+
+            // 修改用户名
+            $(document).on('click', '.edit-username-btn', function(){
+                const uid = $(this).data('uid');
+                $('#edit-username-uid').val(uid);
+                $('#edit-username-password').val('');
+                $('#edit-username-newname').val('');
+                $('#edit-username-modal').show();
+            });
+
+            $('#edit-username-form').on('submit', function(event){
+                event.preventDefault();
+                const formData = new FormData(this);
+                $.ajax({
+                    url: "{{ url_for('edit_user') }}",
+                    method: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response){
+                        $('#edit-username-modal').hide();
+                        if(response.status === 'success'){
+                            showAlert(response.message);
+                            loadUsers();
+                            $('#edit-username-password').val('');
+                            $('#edit-username-newname').val('');
+                        } else {
+                            showErrorModal(response.message);
+                        }
+                    },error: function(response){
+                        showErrorModal(response.responseJSON.message);
+                    }
+                });
+            });
+
+            // 修改密码
+            $(document).on('click', '.edit-password-btn', function(){
+                const uid = $(this).data('uid');
+                $('#edit-password-uid').val(uid);
+                $('#edit-password-oldpassword').val('');
+                $('#edit-password-newpassword').val('');
+                $('#edit-password-modal').show();
+            });
+
+            $('#edit-password-form').on('submit', function(event){
+                event.preventDefault();
+                const formData = new FormData(this);
+                $.ajax({
+                    url: "{{ url_for('change_password') }}",
+                    method: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response){
+                        $('#edit-password-modal').hide();
+                        if(response.status === 'success'){
+                            showAlert(response.message);
+                            $('#edit-password-oldpassword').val('');
+                            $('#edit-password-newpassword').val('');
+                        } else {
+                            showErrorModal(response.message);
+                        }
+                    },error: function(response){
+                        showErrorModal(response.responseJSON.message);
+                    }
+                });
+            });
+
+            // 初始加载用户列表
+            loadUsers();
+
+            // 弹窗关闭功能
+            $('.modal .close').on('click', function() {
+                $(this).closest('.modal').hide();
+            });
+        });
+    </script>
+</body>
+</html>

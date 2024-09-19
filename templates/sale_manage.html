@@ -1,0 +1,302 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>购票</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sale_manage_styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>导航栏</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('home') }}" class="{{ 'active' if active_link == 'home' else '' }}"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="{{ url_for('station_manage') }}" class="{{ 'active' if active_link == 'station_manage' else '' }}"><i class="fas fa-train"></i> 站点管理</a></li>
+                <li><a href="{{ url_for('train_manage') }}" class="{{ 'active' if active_link == 'train_manage' else '' }}"><i class="fas fa-train"></i> 车次管理</a></li>
+                <li><a href="{{ url_for('price_manage') }}" class="{{ 'active' if active_link == 'price_manage' else '' }}"><i class="fas fa-money-bill-alt"></i> 票价管理</a></li>
+                <li><a href="{{ url_for('sale_manage') }}" class="{{ 'active' if active_link == 'sale_manage' else '' }}"><i class="fas fa-shopping-cart"></i> 购票</a></li>
+                <li><a href="{{ url_for('refund_manage') }}" class="{{ 'active' if active_link == 'refund_manage' else '' }}"><i class="fas fa-undo"></i> 退票</a></li>
+                <li><a href="{{ url_for('statistics_train') }}" class="{{ 'active' if active_link == 'statistics_train' else '' }}"><i class="fas fa-chart-bar"></i> 车次销售统计</a></li>
+                <li><a href="{{ url_for('statistics_staff') }}" class="{{ 'active' if active_link == 'statistics_staff' else '' }}"><i class="fas fa-chart-bar"></i> 业务员销售统计</a></li>
+                <li><a href="{{ url_for('user_manage') }}" class="{{ 'active' if active_link == 'user_manage' else '' }}"><i class="fas fa-user"></i> 业务员管理</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+        <div class="main_content">
+            <div class="header">购票</div>
+            <div class="content-wrapper">
+                <div class="form-container">
+                    <h2>搜索车次</h2>
+                    <form id="search-form">
+                        <input type="text" name="start_station" list="start-stations" placeholder="出发站" required>
+                        <datalist id="start-stations"></datalist>
+                        <input type="text" name="end_station" list="end-stations" placeholder="到达站" required>
+                        <datalist id="end-stations"></datalist>
+                        <input type="datetime-local" name="datetime" required>
+                        <button type="submit" class="btn">搜索</button>
+                    </form>
+                </div>
+                <div class="user-list-wrapper">
+                    <div class="user-list-title">车次列表</div>
+                    <table id="ticket-table">
+                        <thead>
+                            <tr>
+                                <th>车次号</th>
+                                <th>出发站</th>
+                                <th>到达站</th>
+                                <th>出发时间</th>
+                                <th>到达时间</th>
+                                <th>商务座余票</th>
+                                <th>一等座余票</th>
+                                <th>二等座余票</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 车次数据将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 第一个弹窗 -->
+    <div id="buy-ticket-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>选择座位类型</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>座位类型</th>
+                            <th>价格</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>商务座</td>
+                            <td id="business-seat-price">0</td>
+                        </tr>
+                        <tr>
+                            <td>一等座</td>
+                            <td id="first-class-seat-price">0</td>
+                        </tr>
+                        <tr>
+                            <td>二等座</td>
+                            <td id="second-class-seat-price">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="seat-type-btns">
+                    <button id="business-seat-btn" class="btn" disabled>商务座</button>
+                    <button id="first-class-seat-btn" class="btn" disabled>一等座</button>
+                    <button id="second-class-seat-btn" class="btn" disabled>二等座</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 第二个弹窗 -->
+    <div id="confirm-buy-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>确认购票</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="passenger-id">乘客ID</label>
+                    <input type="text" id="passenger-id" required>
+                </div>
+                <div class="form-group form-group-btn">
+                    <button id="confirm-buy-btn" class="btn">确认购票</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            function showAlert(message) {
+                const alertModal = $('<div class="modal"><div class="modal-content"><div class="modal-header"><h2>提示</h2><span class="close">&times;</span></div><div class="modal-body"><p>' + message + '</p></div></div></div>');
+                $('body').append(alertModal);
+                alertModal.show();
+
+                // 关闭模态框
+                alertModal.find('.close').on('click', function() {
+                    alertModal.remove();
+                });
+
+                // 点击模态框外部区域关闭
+                $(window).on('click', function(event) {
+                    if (event.target === alertModal[0]) {
+                        alertModal.remove();
+                    }
+                });
+            }
+
+            // 加载站点列表
+            function loadStations(){
+                $.ajax({
+                    url: "{{ url_for('station_all') }}",
+                    method: "POST",
+                    success: function(response){
+                        if(response.status === 'success'){
+                            let stations = response.data;
+                            let table_body = '';
+                            stations.forEach(function(station){
+                                table_body +=  '<option value="' + station + '">' + station + '</option>';
+                            });
+                            $('#start-stations').html(table_body);
+                            $('#end-stations').html(table_body);
+                        }
+                    }
+                });
+            }
+
+            loadStations();
+
+            // 搜索车次
+            $('#search-form').on('submit', function(event) {
+                event.preventDefault();
+                const formData = $(this).serialize();
+                $.ajax({
+                    url: "{{ url_for('search_tickets_by_station_and_time') }}",
+                    method: "POST",
+                    data: formData,
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            let data = response.data;
+                            let table_body = '';
+                            data.forEach(function(ticket) {
+                                //将date时间减少8小时
+                                ticket.departure_time = new Date(ticket.departure_time);
+                                ticket.departure_time.setHours(ticket.departure_time.getHours() - 8);
+                                ticket.arrival_time = new Date(ticket.arrival_time);
+                                ticket.arrival_time.setHours(ticket.arrival_time.getHours() - 8);
+                                table_body += '<tr>';
+                                table_body += '<td>' + ticket.train_id + '</td>';
+                                table_body += '<td>' + ticket.start_station + '</td>';
+                                table_body += '<td>' + ticket.end_station + '</td>';
+                                table_body += '<td>' + ticket.departure_time.toLocaleString() + '</td>';
+                                table_body += '<td>' + ticket.arrival_time.toLocaleString() + '</td>';
+                                table_body += '<td>' + ticket.remaining_business_seats + '</td>';
+                                table_body += '<td>' + ticket.remaining_first_class_seats + '</td>';
+                                table_body += '<td>' + ticket.remaining_second_class_seats + '</td>';
+                                table_body += '<td><button class="buy-ticket-btn" data-train-id="' + ticket.train_id + '" data-start-station="' + ticket.start_station + '" data-end-station="' + ticket.end_station + '" data-schedule-id="' + ticket.schedule_id + '">购买</button></td>'; // 为data-schedule-id赋值
+                                table_body += '</tr>';
+                            });
+                            $('#ticket-table tbody').html(table_body);
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            let selectedScheduleId; // Store schedule_id here
+
+            // 购买按钮单击事件
+            $(document).on('click', '.buy-ticket-btn', function() {
+                const trainId = $(this).data('train-id');
+                const startStation = $(this).data('start-station');
+                const endStation = $(this).data('end-station');
+                selectedScheduleId = $(this).data('schedule-id'); // Get the schedule_id
+
+                // 请求价格信息
+                $.ajax({
+                    url: "{{ url_for('get_price_by_train_id_and_station_strict') }}",
+                    method: "POST",
+                    data: {
+                        train_id: trainId,
+                        start_station: startStation,
+                        end_station: endStation
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            const prices = response.data;
+
+                            // 填充价格信息
+                            $('#business-seat-price').text(prices.business_seat_price);
+                            $('#first-class-seat-price').text(prices.first_class_seat_price);
+                            $('#second-class-seat-price').text(prices.sceond_class_seat_price);
+
+                            // 启用/禁用座位类型按钮
+                            $('#business-seat-btn').prop('disabled', prices.business_seat_price === 0);
+                            $('#first-class-seat-btn').prop('disabled', prices.first_class_seat_price === 0);
+                            $('#second-class-seat-btn').prop('disabled', prices.sceond_class_seat_price === 0);
+
+                            // 显示第一个弹窗
+                            $('#buy-ticket-modal').show();
+
+                            // 座位类型按钮单击事件
+                            $('.seat-type-btns button').off('click').on('click', function() {
+                                const seatClass = $(this).text().trim();
+                                let price;
+                                switch (seatClass) {
+                                    case '商务座':
+                                        price = prices.business_seat_price;
+                                        break;
+                                    case '一等座':
+                                        price = prices.first_class_seat_price;
+                                        break;
+                                    case '二等座':
+                                        price = prices.sceond_class_seat_price;
+                                        break;
+                                }
+
+                                // 隐藏第一个弹窗,显示第二个弹窗
+                                $('#buy-ticket-modal').hide();
+                                $('#confirm-buy-modal').show();
+
+                                // 确认购票按钮单击事件
+                                $('#confirm-buy-btn').off('click').on('click', function() {
+                                    const passengerId = $('#passenger-id').val();
+                                    const data = {
+                                        passenger_id: passengerId,
+                                        schedule_id: selectedScheduleId, // Use the stored schedule_id
+                                        start_station: startStation,
+                                        end_station: endStation,
+                                        seat_class: seatClass,
+                                        price: price
+                                    };
+
+                                    $.ajax({
+                                        url: "{{ url_for('buy_ticket') }}",
+                                        method: "POST",
+                                        data: data,
+                                        success: function(response) {
+                                            $('#confirm-buy-modal').hide();
+                                            if (response.status === 'success') {
+                                                showAlert(response.message);
+                                                $('#search-form').trigger('submit'); // 重新加载车次列表
+                                            } else {
+                                                showAlert(response.message);
+                                            }
+                                        }
+                                    });
+                                });
+                            });
+                        } else {
+                            showAlert(response.message);
+                        }
+                    }
+                });
+            });
+
+            // 弹窗关闭功能
+            $('.modal .close').on('click', function() {
+                $(this).closest('.modal').hide();
+            });
+        });
+   </script>
+</body>
+</html>

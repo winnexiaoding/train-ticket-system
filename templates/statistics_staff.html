@@ -1,0 +1,142 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>业务员销售统计</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/statistics_staff_styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>导航栏</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('home') }}" class="{{ 'active' if active_link == 'home' else '' }}"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="{{ url_for('station_manage') }}" class="{{ 'active' if active_link == 'station_manage' else '' }}"><i class="fas fa-train"></i> 站点管理</a></li>
+                <li><a href="{{ url_for('train_manage') }}" class="{{ 'active' if active_link == 'train_manage' else '' }}"><i class="fas fa-train"></i> 车次管理</a></li>
+                <li><a href="{{ url_for('price_manage') }}" class="{{ 'active' if active_link == 'price_manage' else '' }}"><i class="fas fa-money-bill-alt"></i> 票价管理</a></li>
+                <li><a href="{{ url_for('sale_manage') }}" class="{{ 'active' if active_link == 'sale_manage' else '' }}"><i class="fas fa-shopping-cart"></i> 购票</a></li>
+                <li><a href="{{ url_for('refund_manage') }}" class="{{ 'active' if active_link == 'refund_manage' else '' }}"><i class="fas fa-undo"></i> 退票</a></li>
+                <li><a href="{{ url_for('statistics_train') }}" class="{{ 'active' if active_link == 'statistics_train' else '' }}"><i class="fas fa-chart-bar"></i> 车次销售统计</a></li>
+                <li><a href="{{ url_for('statistics_staff') }}" class="{{ 'active' if active_link == 'statistics_staff' else '' }}"><i class="fas fa-chart-bar"></i> 业务员销售统计</a></li>
+                <li><a href="{{ url_for('user_manage') }}" class="{{ 'active' if active_link == 'user_manage' else '' }}"><i class="fas fa-user"></i> 业务员管理</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+        <div class="main_content">
+            <div class="header">业务员销售统计</div>
+            <div class="content-wrapper">
+                <div class="form-container">
+                    <h2>搜索条件</h2>
+                    <form id="search-form">
+                        <input type="date" name="start_date" placeholder="开始日期" required>
+                        <input type="date" name="end_date" placeholder="结束日期">
+                        <button type="submit" class="btn">搜索</button>
+                    </form>
+                </div>
+                <div class="user-list-wrapper">
+                    <div class="user-list-title">业务员销售统计</div>
+                    <div class="chart-container">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                    <table id="statistics-table">
+                        <thead>
+                            <tr>
+                                <th>业务员ID</th>
+                                <th>总销售额</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 统计数据将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            let salesChart;
+
+            function showAlert(message) {
+                // 显示提示框的代码
+            }
+
+            $('#search-form').on('submit', function(event) {
+                event.preventDefault();
+                const start_date = $('input[name="start_date"]').val();
+                const end_date = $('input[name="end_date"]').val();
+                if (start_date) {
+                    $.ajax({
+                        url: "{{ url_for('get_statistics_by_date') }}",
+                        method: "POST",
+                        data: {start_date: start_date, end_date: end_date},
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                let data = response.data;
+                                let table_body = '';
+                                let chartLabels = [];
+                                let chartData = [];
+                                data.forEach(function(statistics) {
+                                    table_body += '<tr>';
+                                    table_body += '<td>' + statistics.Staff_id + '</td>';
+                                    table_body += '<td>' + statistics.Total_sales + '</td>';
+                                    table_body += '</tr>';
+                                    chartLabels.push(statistics.Staff_id);
+                                    chartData.push(statistics.Total_sales);
+                                });
+                                $('#statistics-table tbody').html(table_body);
+                                updateChart(chartLabels, chartData);
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                } else {
+                    showAlert('请选择开始日期。');
+                }
+            });
+
+            function updateChart(labels, data) {
+                const ctx = document.getElementById('salesChart').getContext('2d');
+                if (salesChart) {
+                    salesChart.destroy(); // 销毁之前的图表实例
+                }
+                salesChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '总销售额',
+                            data: data,
+                            backgroundColor: '#87ceeb' // 浅蓝色
+                        }]
+                    },
+                    options: {
+                        responsive: true, // 确保图表是响应式的
+                        maintainAspectRatio: false, // 允许图表调整比例
+                        indexAxis: 'y', // 将柱状图设置为横向
+                        scales: {
+                            x: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 窗口大小改变时更新图表
+            $(window).resize(function() {
+                if (salesChart) {
+                    salesChart.resize();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

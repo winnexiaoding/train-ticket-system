@@ -1,0 +1,213 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>车次售票信息统计</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/statistics_train_styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>导航栏</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('home') }}" class="{{ 'active' if active_link == 'home' else '' }}"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="{{ url_for('station_manage') }}" class="{{ 'active' if active_link == 'station_manage' else '' }}"><i class="fas fa-train"></i> 站点管理</a></li>
+                <li><a href="{{ url_for('train_manage') }}" class="{{ 'active' if active_link == 'train_manage' else '' }}"><i class="fas fa-train"></i> 车次管理</a></li>
+                <li><a href="{{ url_for('price_manage') }}" class="{{ 'active' if active_link == 'price_manage' else '' }}"><i class="fas fa-money-bill-alt"></i> 票价管理</a></li>
+                <li><a href="{{ url_for('sale_manage') }}" class="{{ 'active' if active_link == 'sale_manage' else '' }}"><i class="fas fa-shopping-cart"></i> 购票</a></li>
+                <li><a href="{{ url_for('refund_manage') }}" class="{{ 'active' if active_link == 'refund_manage' else '' }}"><i class="fas fa-undo"></i> 退票</a></li>
+                <li><a href="{{ url_for('statistics_train') }}" class="{{ 'active' if active_link == 'statistics_train' else '' }}"><i class="fas fa-chart-bar"></i> 车次销售统计</a></li>
+                <li><a href="{{ url_for('statistics_staff') }}" class="{{ 'active' if active_link == 'statistics_staff' else '' }}"><i class="fas fa-chart-bar"></i> 业务员销售统计</a></li>
+                <li><a href="{{ url_for('user_manage') }}" class="{{ 'active' if active_link == 'user_manage' else '' }}"><i class="fas fa-user"></i> 业务员管理</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+        <div class="main_content">
+            <div class="header">车次售票信息统计</div>
+            <div class="content-wrapper">
+                <div class="form-container">
+                    <h2>搜索条件</h2>
+                    <form id="search-form">
+                        <input type="text" name="train_id" placeholder="车次" list="train_id_list" autocomplete="off">
+                        <datalist id="train_id_list"></datalist>
+                        <input type="text" name="schedule_id" placeholder="发车时间" list="schedule_id_list" autocomplete="off" disabled>
+                        <datalist id="schedule_id_list">
+                            <option value="" selected>请选择发车时间</option>
+                        </datalist>
+                        <button type="submit" class="btn">搜索</button>
+                    </form>
+                </div>
+                <div class="user-list-wrapper">
+                    <div class="user-list-title">车次售票信息</div>
+                    <table id="statistics-table">
+                        <thead>
+                            <tr>
+                                <th>车次</th>
+                                <th>发车时间</th>
+                                <th>当前站</th>
+                                <th>下一站</th>
+                                <th>座位等级</th>
+                                <th>总座位数</th>
+                                <th>已售座位数</th>
+                                <th>剩余座位数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 车次售票信息将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            function showAlert(message) {
+                const alertModal = $('<div class="modal"><div class="modal-content"><div class="modal-header"><h2>提示</h2><span class="close">&times;</span></div><div class="modal-body"><p>' + message + '</p></div></div></div>');
+                $('body').append(alertModal);
+                alertModal.show();
+
+                // 关闭模态框
+                alertModal.find('.close').on('click', function() {
+                    alertModal.remove();
+                });
+
+                // 点击模态框外部区域关闭
+                $(window).on('click', function(event) {
+                    if (event.target === alertModal[0]) {
+                        alertModal.remove();
+                    }
+                });
+            }
+
+            // 加载所有车次
+            $.ajax({
+                url: "{{ url_for('show_all_trains') }}",
+                method: "POST",
+                success: function(response) {
+                    if (response.status === 'success') {
+                        let data = response.data;
+                        let train_id_options = '';
+                        data.forEach(function(train) {
+                            train_id_options += '<option value="' + train.train_id + '">' + train.train_id + '</option>';
+                        });
+                        $('#train_id_list').html(train_id_options);
+                    } else {
+                        showAlert(response.message);
+                    }
+                }
+            });
+
+            let scheduleData = [];
+
+            // 根据车次ID加载发车时间
+            $('input[name="train_id"]').on('input', function() {
+                const train_id = $(this).val();
+                const schedule_input = $('input[name="schedule_id"]');
+                if (train_id) {
+                    schedule_input.prop('disabled', false);
+                    $.ajax({
+                        url: "{{ url_for('get_schedule_by_train_id') }}",
+                        method: "POST",
+                        data: {train_id: train_id},
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                scheduleData = response.data;
+                                let schedule_id_options = '<option value="" selected>请选择发车时间</option>';
+                                scheduleData.forEach(function(schedule) {
+                                    //将date时间减少8小时
+                                    schedule.departure_time = new Date(schedule.departure_time);
+                                    schedule.departure_time.setHours(schedule.departure_time.getHours() - 8);
+                                    const departureTime = schedule.departure_time.toLocaleString()
+                                    schedule_id_options += '<option value="' + departureTime + '">' + departureTime + '</option>';
+                                });
+                                $('#schedule_id_list').html(schedule_id_options);
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                } else {
+                    schedule_input.prop('disabled', true);
+                    schedule_input.val('');
+                    $('#schedule_id_list').html('<option value="" selected>请选择发车时间</option>');
+                }
+            });
+
+            // 加载所有车次销售信息
+            $.ajax({
+                url: "{{ url_for('get_all_statistics_of_train') }}",
+                method: "POST",
+                success: function(response) {
+                    if (response.status === 'success') {
+                        let data = response.data;
+                        let table_body = '';
+                        data.forEach(function(statistics) {
+                            statistics.date = new Date(statistics.date);
+                            statistics.date.setHours(statistics.date.getHours() - 8);
+                            statistics.date = statistics.date.toLocaleString();
+                            table_body += '<tr>';
+                            table_body += '<td>' + statistics.train_id + '</td>';
+                            table_body += '<td>' + statistics.date + '</td>';
+                            table_body += '<td>' + statistics.Current_station + '</td>';
+                            table_body += '<td>' + statistics.Next_station + '</td>';
+                            table_body += '<td>' + statistics.Seat_class + '</td>';
+                            table_body += '<td>' + statistics.Total_seats + '</td>';
+                            table_body += '<td>' + statistics.Sold_seats + '</td>';
+                            table_body += '<td>' + statistics.Remain_seats + '</td>';
+                            table_body += '</tr>';
+                        });
+                        $('#statistics-table tbody').html(table_body);
+                    } else {
+                        showAlert(response.message);
+                    }
+                }
+            });
+
+            // 搜索车次售票信息
+            $('#search-form').on('submit', function(event) {
+                event.preventDefault();
+                const train_id = $('input[name="train_id"]').val();
+                const schedule_id = $('input[name="schedule_id"]').val();
+                if (train_id && schedule_id) {
+                    //const selectedSchedule = scheduleData.find(schedule => schedule.schedule_id == schedule_id);
+                    //const date = selectedSchedule.departure_time;
+                    $.ajax({
+                        url: "{{ url_for('get_statistics_by_train_id_and_date') }}",
+                        method: "POST",
+                        data: {train_id: train_id, date: schedule_id},
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                let data = response.data;
+                                let table_body = '';
+                                data.forEach(function(statistics) {
+                                    table_body += '<tr>';
+                                    table_body += '<td>' + statistics.train_id + '</td>';
+                                    table_body += '<td>' + statistics.date + '</td>';
+                                    table_body += '<td>' + statistics.Current_station + '</td>';
+                                    table_body += '<td>' + statistics.Next_station + '</td>';
+                                    table_body += '<td>' + statistics.Seat_class + '</td>';
+                                    table_body += '<td>' + statistics.Total_seats + '</td>';
+                                    table_body += '<td>' + statistics.Sold_seats + '</td>';
+                                    table_body += '<td>' + statistics.Remain_seats + '</td>';
+                                    table_body += '</tr>';
+                                });
+                                $('#statistics-table tbody').html(table_body);
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                } else {
+                    showAlert('请选择车次和发车时间。');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

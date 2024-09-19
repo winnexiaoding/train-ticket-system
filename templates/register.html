@@ -1,0 +1,96 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/register_styles.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // 确保弹出框在初始状态下隐藏
+            $('#myModal').hide();
+
+            $('#registerForm').on('submit', function(event) {
+                event.preventDefault(); // 防止表单默认提交
+
+                // 获取密码和确认密码
+                var password = $('input[name="password"]').val();
+                var confirmPassword = $('input[name="confirm_password"]').val();
+
+                // 检查密码是否一致
+                if (password !== confirmPassword) {
+                    showModal("两次输入的密码不一致");
+                    return;
+                }
+
+                $.ajax({
+                    url: '/register',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        showModal(response.message, response.status === 'success');
+                    },
+                    error: function(xhr) {
+                        showModal(xhr.responseJSON.message, false);
+                    }
+                });
+            });
+
+            function showModal(message, isSuccess) {
+                $('#modalMessage').text(message);
+                if (isSuccess) {
+                    $('#modalButton').text("返回首页");
+                    $('#modalButton').on('click', function() {
+                        window.location.href = '/';
+                    });
+                } else {
+                    $('#modalButton').text("关闭");
+                    $('#modalButton').on('click', function() {
+                        $('#myModal').fadeOut();
+                    });
+                }
+                $('#myModal').fadeIn();
+            }
+
+            $('.close').on('click', function() {
+                $('#myModal').fadeOut();
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="system-title">火车站票务管理系统</h1>
+        <div class="form-box">
+            <h2>注册</h2>
+            <form id="registerForm">
+                <div class="textbox">
+                    <input type="text" name="username" placeholder="用户名" required>
+                </div>
+                <div class="textbox">
+                    <input type="text" name="name" placeholder="姓名" required>
+                </div>
+                <div class="textbox">
+                    <input type="password" name="password" placeholder="密码" required>
+                </div>
+                <div class="textbox">
+                    <input type="password" name="confirm_password" placeholder="确认密码" required>
+                </div>
+                <input type="submit" class="btn" value="注册">
+            </form>
+            <div class="register-link">
+                <a href="{{ url_for('login') }}">返回登录页面</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹出框结构 -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p id="modalMessage"></p>
+            <button id="modalButton" class="btn"></button>
+        </div>
+    </div>
+</body>
+</html>

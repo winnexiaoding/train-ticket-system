@@ -1,0 +1,215 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>站点管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/station_manage_styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>导航栏</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('home') }}" class="{{ 'active' if active_link == 'home' else '' }}"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="{{ url_for('station_manage') }}" class="{{ 'active' if active_link == 'station_manage' else '' }}"><i class="fas fa-train"></i> 站点管理</a></li>
+                <li><a href="{{ url_for('train_manage') }}" class="{{ 'active' if active_link == 'train_manage' else '' }}"><i class="fas fa-train"></i> 车次管理</a></li>
+                <li><a href="{{ url_for('price_manage') }}" class="{{ 'active' if active_link == 'price_manage' else '' }}"><i class="fas fa-money-bill-alt"></i> 票价管理</a></li>
+                <li><a href="{{ url_for('sale_manage') }}" class="{{ 'active' if active_link == 'sale_manage' else '' }}"><i class="fas fa-shopping-cart"></i> 购票</a></li>
+                <li><a href="{{ url_for('refund_manage') }}" class="{{ 'active' if active_link == 'refund_manage' else '' }}"><i class="fas fa-undo"></i> 退票</a></li>
+                <li><a href="{{ url_for('statistics_train') }}" class="{{ 'active' if active_link == 'statistics_train' else '' }}"><i class="fas fa-chart-bar"></i> 车次销售统计</a></li>
+                <li><a href="{{ url_for('statistics_staff') }}" class="{{ 'active' if active_link == 'statistics_staff' else '' }}"><i class="fas fa-chart-bar"></i> 业务员销售统计</a></li>
+                <li><a href="{{ url_for('user_manage') }}" class="{{ 'active' if active_link == 'user_manage' else '' }}"><i class="fas fa-user"></i> 业务员管理</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+        <div class="main_content">
+            <div class="header">站点管理</div>
+            <div class="content-wrapper">
+                <div class="form-container">
+                    <div class="station_add">
+                        <h2>添加站点</h2>
+                        <form id="station_add_form">
+                            <input type="text" name="name" placeholder="站点名称" required>
+                            <button type="submit">添加</button>
+                        </form>
+                    </div>
+
+                    <div class="station_delete">
+                        <h2>删除站点</h2>
+                        <form id="station_delete_form">
+                            <input type="text" name="name" placeholder="站点名称" list="train_id_list" autocomplete="off" required>
+                            <datalist id="train_id_list"></datalist>
+                            <button type="submit">删除</button>
+                        </form>
+                    </div>
+
+                    <div class="station_search">
+                        <h2>搜索站点</h2>
+                        <form id="station_search_form">
+                            <input type="text" name="name" placeholder="站点名称">
+                            <button type="submit">搜索</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="station-list-wrapper">
+                    <div class="station-list-title">站点列表</div>
+                    <table id="station_table">
+                        <thead>
+                            <tr>
+                                <th>名称</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 站点数据将由JS填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        function showAlert(message) {
+            const alertModal = $('<div class="modal"><div class="modal-content"><div class="modal-header"><h2>提示</h2><span class="close">&times;</span></div><div class="modal-body"><p>' + message + '</p></div></div></div>');
+            $('body').append(alertModal);
+            alertModal.show();
+
+            // 关闭模态框
+            alertModal.find('.close').on('click', function() {
+                alertModal.remove();
+            });
+
+            // 点击模态框外部区域关闭
+            $(window).on('click', function(event) {
+                if (event.target === alertModal[0]) {
+                    alertModal.remove();
+                }
+            });
+        }
+        $(document).ready(function(){
+            // 添加站点
+            $('#station_add_form').on('submit', function(event){
+                event.preventDefault();
+                $.ajax({
+                    url: "{{ url_for('station_add') }}",
+                    method: "POST",
+                    data: $(this).serialize(),
+                    success: function(response){
+                        if(response.status === 'success'){
+                            loadStations();
+                            showAlert("添加站点成功");
+                        } else {
+                            showAlert(response.message);
+                        }
+                    },
+                    error: function(xhr, status, error){
+                        showAlert('添加站点失败，请检查站点名称是否重复');
+                    }
+                });
+            });
+
+            // 删除站点
+            $(document).on('click', '.delete-station-btn', function(){
+                const stationName = $(this).data('name');
+                $.ajax({
+                    url: "{{ url_for('station_delete') }}",
+                    method: "POST",
+                    data: { name: stationName },
+                    success: function(response){
+                        if(response.status === 'success'){
+                            loadStations();
+                            showAlert("删除站点成功");
+                        } else {
+                            showAlert(response.message);
+                        }
+                    },
+                    error: function(xhr, status, error){
+                        showAlert('删除站点失败，请检查站点名称是否还有车次在运行');
+                    }
+                });
+            });
+
+            // 删除站点
+            $('#station_delete_form').on('submit', function(event){
+                event.preventDefault();
+                $.ajax({
+                    url: "{{ url_for('station_delete') }}",
+                    method: "POST",
+                    data: $(this).serialize(),
+                    success: function(response){
+                        if(response.status === 'success'){
+                            loadStations();
+                            showAlert("删除站点成功");
+                        } else {
+                            showAlert(response.message);
+                        }
+                    },
+                    error: function(xhr, status, error){
+                        showAlert('删除站点失败，请检查站点名称是否存在或者是否还有车次在运行');
+                    }
+                });
+            });
+
+            // 搜索站点
+            $('#station_search_form').on('submit', function(event){
+                event.preventDefault();
+                var searchQuery = $(this).find('input[name="name"]').val();
+                if (searchQuery.trim() === '') {
+                    // 搜索框为空,加载全部站点
+                    loadStations();
+                } else {
+                    $.ajax({
+                        url: "{{ url_for('station_search') }}",
+                        method: "POST",
+                        data: $(this).serialize(),
+                        success: function(response){
+                            if(response.status === 'success'){
+                                let stations = response.data;
+                                let table_body = '';
+                                stations.forEach(function(station){
+                                    table_body += '<tr><td>' + station + '</td><td><button class="delete-station-btn" data-name="' + station + '">删除</button></td></tr>';
+                                });
+                                $('#station_table tbody').html(table_body);
+                            } else {
+                                showAlert(response.message);
+                            }
+                        }
+                    });
+                }
+            });
+
+            // 加载站点列表
+            function loadStations(){
+                $.ajax({
+                    url: "{{ url_for('station_all') }}",
+                    method: "POST",
+                    success: function(response){
+                        if(response.status === 'success'){
+                            let stations = response.data;
+                            let table_body = '';
+                            let delete_table_body = '';
+                            stations.forEach(function(station){
+                                table_body += '<tr><td>' + station + '</td><td><button class="delete-station-btn" data-name="' + station + '">删除</button></td></tr>';
+                                delete_table_body +=  '<option value="' + station + '">' + station + '</option>';
+                            });
+                            $('#station_table tbody').html(table_body);
+                            $('#train_id_list').html(delete_table_body);
+
+                        }
+                    }
+                });
+            }
+
+            // 初始加载站点列表
+            loadStations();
+        });
+    </script>
+</body>
+</html>
